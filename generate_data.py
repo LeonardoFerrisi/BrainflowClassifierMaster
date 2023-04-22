@@ -3,7 +3,26 @@ from brainflow import DataFilter, FilterTypes, AggOperations, DetrendOperations
 import time
 from termcolor import colored
 import pygame
+import os
 
+def parse_config(config_file):
+    """
+    Checks the local config file and returns it's contents as a dictionary
+    """
+
+    dir = os.getcwd()
+    config_path = os.path.join(dir, config_file)
+
+    config_dict = {}
+
+    with open(config_path, "r") as f:
+        for line in f:
+            
+            content = line.split(": ")
+            print(content)
+            config_dict[content[0]] = content[1]
+
+    return config_dict
 
 def select_board_id():
     """
@@ -36,7 +55,11 @@ def select_board_id():
         return None
 
 
-def collect_data(transpose=True, delay=10, iterations=10):
+def collect_data(transpose=True, delay=30, iterations=10):
+    """
+    Collects data for processing with Machine Learning from EEG
+    """
+
     import brainflow    
     from alive_progress import alive_bar
 
@@ -45,11 +68,17 @@ def collect_data(transpose=True, delay=10, iterations=10):
 
     board_id = select_board_id()
 
+    params = brainflow.BrainFlowInputParams()
+
+    config = parse_config("config.dat")
+    if board_id != brainflow.BoardIds.UNICORN_BOARD.value:
+        port = config["PORT"]
+        new_config = input(f"Use new serial port, or used stored serial port? Stored: {port}")
+        if new_config != "":
+            port = new_config
+        params.serial_port = port
     # port = input(colored('Enter port: ', 'green'))
     
-    params = brainflow.BrainFlowInputParams()
-    
-    params.serial_port = "COM3"
     print(f"BOARD ID: {board_id}")
     board = BoardShim(board_id, params)
     board.prepare_session()
@@ -58,10 +87,27 @@ def collect_data(transpose=True, delay=10, iterations=10):
     
     input("Press Enter to continue...")
 
-    dataset_x = []
-    dataset_y = [1,0,1,0,1,0,1,0,1,0]
+    dataset_y_config = input("""
+    Please select a configuration for your dataset format from the following:
 
-    for i in range(1, iterations):
+    1. [ON, OFF, ON, OFF, ON, OFF, ON, OFF, ON, OFF]
+    2. [OFF, ON, OFF, ON, OFF, ON, OFF, ON, OFF, ON]
+    3. [ON, ON, ON, ON, ON, ON, ON, ON, ON, ON, ON]
+    4. [OFF, OFF, OFF, OFF, OFF, OFF, OFF, OFF, OFF, OFF, OFF]                         
+    """)
+
+    dy_params = {
+        "1": [1,0,1,0,1,0,1,0,1,0],
+        "2": [0,1,0,1,0,1,0,1,0,0],
+        "3": [1,1,1,1,1,1,1,1,1,1],
+        "4": [0,0,0,0,0,0,0,0,0,0]
+    }
+    if dataset_y_config in list(dy_params.keys()):
+        dataset_y = dy_params[dataset_y_config]
+
+    dataset_x = []
+
+    for i in range(1, iterations+1):
         print(f"\n\nRunning Session {i}...\n\n")
         sound.play()
         time.sleep(2)
@@ -81,10 +127,19 @@ def collect_data(transpose=True, delay=10, iterations=10):
         board.stop_stream()
         
         import numpy as np
-        DataFilter.write_file(data, f'test_{i}.csv', 'w')  # use 'a' for append mode
+        import os
         
-        attempt = DataFilter.read_file(f'test_{i}.csv')
- 
+        datapath = os.path.join(os.getcwd(), 'data')
+        if not os.path.exists(datapath):
+            os.makedirs(datapath)
+
+        current_value = dataset_y[i]
+        filename = f'test_{i}_{current_value}.csv'
+
+        filepath = os.path.join(datapath, filename)
+        DataFilter.write_file(data, filepath, 'w')  # use 'a' for append mode
+        
+        attempt = DataFilter.read_file(filepath)
         
         eeg_channels = BoardShim.get_eeg_channels(board_id)
         sampling_rate = BoardShim.get_sampling_rate(board_id)
@@ -104,4 +159,3 @@ def collect_data(transpose=True, delay=10, iterations=10):
 if __name__ == "__main__":
     dataset_x, dataset_y = collect_data()
     print("Data collection complete.")
-
