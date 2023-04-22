@@ -133,7 +133,7 @@ def collect_data(transpose=True, delay=30, iterations=10):
         if not os.path.exists(datapath):
             os.makedirs(datapath)
 
-        current_value = dataset_y[i]
+        current_value = dataset_y[i-1]
         filename = f'test_{i}_{current_value}.csv'
 
         filepath = os.path.join(datapath, filename)
