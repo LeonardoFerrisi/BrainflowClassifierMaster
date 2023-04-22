@@ -80,19 +80,25 @@ def main():
     for i, model in enumerate(models_available):
         model_dict[str(i)] = model
     print_dict(model_dict)
-
-    model_select = input("Which model would you like to select?")
+    print("\n")
+    model_select = input(colored("Which model would you like to select? >> ", "green"))
     
     current_model = None
     if model_select in list(model_dict.keys()):
-        current_model = model_dict[int(model_select)]
+        current_model = model_dict[model_select]
 
-    model_params = BrainFlowModelParams(BrainFlowMetrics.USER_DEFINED.value,
+    model_params = BrainFlowModelParams(BrainFlowMetrics.USER_DEFINED,
                                               BrainFlowClassifiers.ONNX_CLASSIFIER)
-    model_params.file = os.path.join(os.getcwd(), 'model', current_model)
+
+    model_filepath = os.path.join(os.getcwd(), 'models', current_model)
+    print(f"Model Filepath: {model_filepath}")
+    model_params.file = model_filepath
     model_params.output_name = "probabilities"
 
     ml_model = MLModel(model_params)
+
+    print(MLModel)
+
     ml_model.prepare()
 
     input("Start Stream?")
@@ -101,15 +107,19 @@ def main():
     board.start_stream(45000)
     
     keep_running = True
+
+    time.sleep(6)
+
     while keep_running:
         BoardShim.log_message(LogLevels.LEVEL_INFO.value, 'start sleeping in the main thread')
-        time.sleep(5)  # recommended window size for eeg metric calculation is at least 4 seconds, bigger is better
         data = board.get_board_data()
         eeg_channels = BoardShim.get_eeg_channels(int(master_board_id))
         bands = DataFilter.get_avg_band_powers(data, eeg_channels, sampling_rate, True)
         feature_vector = bands[0]    
-        ml_model.predict(feature_vector)
-    
+        output = ml_model.predict(feature_vector)
+        print(f"Output: {output[0]}")
+        time.sleep(6)  # recommended window size for eeg metric calculation is at least 4 seconds, bigger is better
+
     ml_model.release()
     board.stop_stream()
     board.release_session()
