@@ -129,7 +129,7 @@ def print_dataset_info(data):
     logging.info('Mean:')
     logging.info(np.mean(second_class_np, axis=0))
 
-def train_regression_mindfulness(data):
+def train_regression(data, metric:str='neural'):
     model = LogisticRegression(solver='liblinear', max_iter=4000,
                                 penalty='l2', random_state=2, fit_intercept=True, intercept_scaling=0.2)
     logging.info('#### Logistic Regression ####')
@@ -139,46 +139,46 @@ def train_regression_mindfulness(data):
     logging.info(model.intercept_)
     logging.info(model.coef_)
     
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(model, initial_types=initial_type, target_opset=11, options={type(model): {'zipmap': False}})
-    with open('logreg_mindfulness.onnx', 'wb') as f:
+    with open('logreg_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
-    write_model(model.intercept_, model.coef_, 'mindfulness')
+    write_model(model.intercept_, model.coef_, f'{metric}')
 
-def train_svm_mindfulness(data):
+def train_svm(data, metric:str='neural'):
     model = SVC(kernel='linear', verbose=True, random_state=1, class_weight='balanced', probability=True)
     logging.info('#### SVM ####')
     model.fit(data[0], data[1])
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(model, initial_types=initial_type, target_opset=11, options={type(model): {'zipmap': False}})
-    with open('svm_mindfulness.onnx', 'wb') as f:
+    with open('svm_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
 
-def train_random_forest_mindfulness(data):
+def train_random_forest(data, metric:str='neural'):
     model = RandomForestClassifier(class_weight='balanced', random_state=1, n_jobs=15, n_estimators=200)
     logging.info('#### Random Forest ####')
     scores = cross_val_score(model, data[0], data[1], cv=5, scoring='f1_macro', n_jobs=15)
     logging.info('f1 macro %s' % str(scores))
     model.fit(data[0], data[1])
 
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(model, initial_types=initial_type, target_opset=11, options={type(model): {'zipmap': False}})
-    with open('forest_mindfulness.onnx', 'wb') as f:
+    with open('forest_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
 
-def train_knn_mindfulness(data):
+def train_knn(data, metric:str='neural'):
     model = KNeighborsClassifier(n_neighbors=10, n_jobs=8)
     logging.info('#### KNN ####')
     scores = cross_val_score(model, data[0], data[1], cv=5, scoring='f1_macro', n_jobs=15)
     logging.info('f1 macro %s' % str(scores))
     model.fit(data[0], data[1])
 
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(model, initial_types=initial_type, target_opset=11, options={type(model): {'zipmap': False}})
-    with open('knn_mindfulness.onnx', 'wb') as f:
+    with open('knn_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
 
-def train_mlp_mindfulness(data):
+def train_mlp(data, metric:str='neural'):
     model = MLPClassifier(hidden_layer_sizes=(100, 20),learning_rate='adaptive', max_iter=1000,
                           random_state=1, verbose=True, activation='logistic', solver='adam')
     logging.info('#### MLP ####')
@@ -186,12 +186,12 @@ def train_mlp_mindfulness(data):
     logging.info('f1 macro %s' % str(scores))
     model.fit(data[0], data[1])
 
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(model, initial_types=initial_type, target_opset=11, options={type(model): {'zipmap': False}})
-    with open('mlp_mindfulness.onnx', 'wb') as f:
+    with open('mlp_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
 
-def train_stacking_classifier(data):
+def train_stacking_classifier(data, metric:str='neural'):
     model1 = MLPClassifier(hidden_layer_sizes=(100, 20),learning_rate='adaptive', max_iter=1000,
                           random_state=1, verbose=True, activation='logistic', solver='adam')
     model2 = KNeighborsClassifier(n_neighbors=10, n_jobs=8)
@@ -205,9 +205,9 @@ def train_stacking_classifier(data):
     logging.info('f1 macro %s' % str(scores))
     sclf.fit(data[0], data[1])
 
-    initial_type = [('mindfulness_input', FloatTensorType([1, 5]))]
+    initial_type = [(f'{metric}_input', FloatTensorType([1, 5]))]
     onx = convert_sklearn(sclf, initial_types=initial_type, target_opset=11, options={type(sclf): {'zipmap': False}})
-    with open('stacking_mindfulness.onnx', 'wb') as f:
+    with open('stacking_model.onnx', 'wb') as f:
         f.write(onx.SerializeToString())
 
 def main(reuse=True, board_id=-1):
@@ -215,6 +215,8 @@ def main(reuse=True, board_id=-1):
     parser = argparse.ArgumentParser()
     parser.add_argument('--reuse-dataset', action='store_true')
     args = parser.parse_args()
+
+    metric = input("Please enter a label for your metric: ")
 
     if args.reuse_dataset or reuse:
         with open('dataset_x.pickle', 'rb') as f:
@@ -225,17 +227,19 @@ def main(reuse=True, board_id=-1):
     else:
         # data = prepare_data('relaxed', 'focused', blacklisted_channels={'T3', 'T4'})
         print("Preparing data...")
-        data = prepare_data('focused', 'unfocused', blacklisted_channels={'T3', 'T4'}, board_id=board_id)
+        data = prepare_data(f'{metric}', f'not_{metric}', blacklisted_channels={'T3', 'T4'}, board_id=board_id)
+
+    
 
     print("DATA prepared")
 
-    print_dataset_info(data)
-    train_regression_mindfulness(data)
-    train_svm_mindfulness(data)
-    train_knn_mindfulness(data)
-    train_random_forest_mindfulness(data)
-    train_mlp_mindfulness(data)
-    train_stacking_classifier(data)
+    print_dataset_info(data, metric)
+    train_regression(data, metric)
+    train_svm(data, metric)
+    train_knn(data, metric)
+    train_random_forest(data, metric)
+    train_mlp(data, metric)
+    train_stacking_classifier(data, metric)
 
 def select_board_id():
     """
