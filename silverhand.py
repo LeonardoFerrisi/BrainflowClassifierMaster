@@ -143,7 +143,7 @@ if len(local_datasets) > 0:
                 # if use_stacking_classifier: download_helper(label='Stacking Classifier (MLP + KNN + Random Forest)', buttonlabel='Stacking Classifier', datatype='.onnx', filepath='./models/stacking_model.onnx')
 
         else:
-            st.error('This application is currently only designed to be trained on single feautes (focus, mindfullness, etc...)')
+            st.error('This application is currently only designed to be trained on single features (focus, mindfullness, etc...)')
 
     
 
