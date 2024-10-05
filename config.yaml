@@ -1,0 +1,13 @@
+device_options:
+- Muse2
+- Cyton
+- Ganglion
+- Muse2016
+- Unicorn
+dataset_location: sample_dataset
+use_file_uploader: false
+metrics_quantity: 1
+to_ignore:
+- .git
+- .venv
+- __pycache__

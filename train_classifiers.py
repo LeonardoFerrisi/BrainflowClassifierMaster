@@ -24,7 +24,8 @@ from termcolor import colored
 
 def write_model(intercept, coefs, model_type):
     coefficients_string = '%s' % (','.join([str(x) for x in coefs[0]]))
-    file_content = '''
+    file_content = \
+'''
 #include "%s"
 // clang-format off
 const double %s_coefficients[%d] = {%s};
@@ -213,7 +214,8 @@ def train_stacking_classifier(data, metric:str='neural'):
 def main(reuse=True, board_id=-1):
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--reuse-dataset', action='store_true')
+    parser.add_argument('--reuse-dataset', action='store_true') 
+    # store_true means this flag takes no args, just stores 'true' if present...
     args = parser.parse_args()
 
     metric = input("Please enter a label for your metric: ")
